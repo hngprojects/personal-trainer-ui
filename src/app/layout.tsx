@@ -1,22 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Figtree } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { Providers } from "./provider";
 
-const figtree = Figtree({subsets:['latin'],variable:'--font-sans'});
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
+const interClass = 'font-sans'
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Next Starter";
+const appName = "Personal Trainer || FITCALL.ME";
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
@@ -24,7 +13,12 @@ export const metadata: Metadata = {
     default: appName,
     template: `%s · ${appName}`,
   },
-  description: `${appName} — a Next.js 16 starter.`,
+  description: "Personal Trainer — Your dedicated fitness companion for personalized workouts and professional guidance.",
+  icons: {
+    icon: "/logo.svg",
+    shortcut: "/logo.svg",
+    apple: "/logo.svg",
+  },
 };
 
 export default function RootLayout({
@@ -33,11 +27,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", figtree.variable)}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body className={cn(interClass, 'w-full mx-auto antialiased')}>
+        <Providers>
+          {children}
+        </Providers>
+        
+      </body>
     </html>
   );
 }
