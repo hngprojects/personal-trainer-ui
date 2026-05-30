@@ -1,11 +1,5 @@
-import React from 'react'
+import { TrainersPageClient } from '@/components/admin/trainers/TrainersPageClient'
 
-const page = () => {
-  return (
-    <div>
-      
-    </div>
-  )
+export default function TrainersPage() {
+  return <TrainersPageClient />
 }
-
-export default page

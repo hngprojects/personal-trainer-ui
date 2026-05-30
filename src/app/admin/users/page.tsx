@@ -1,9 +1,5 @@
-import React from 'react'
+import { ClientsPageClient } from '@/components/admin/clients/ClientsPageClient'
 
-const page = () => {
-  return (
-    <div>page</div>
-  )
+export default function ClientsPage() {
+  return <ClientsPageClient />
 }
-
-export default page

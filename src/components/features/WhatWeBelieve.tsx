@@ -41,16 +41,16 @@ const beliefs = [
 const WhatWeBelieve = () => {
   return (
     <section className='w-full bg-white'>
-      <div className='container mx-auto min-h-172.5 max-w-4xl px-4 py-8 flex flex-col items-center justify-center'>
+      <div className='container mx-auto min-h-172.5 px-4 py-8 flex flex-col items-center justify-center'>
         <h2 className='mb-6 font-semibold text-[32px]'>What we believe</h2>
 
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
           {beliefs.map((item, index) => (
             <div
               key={index}
-              className='rounded-2xl border border-[#EBEBEB] bg-white p-6'
+              className='rounded-[16px] border border-[#EBEBEB] bg-white p-6'
             >
-              <div className='mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-primarybadge'>
+              <div className='mb-6 flex h-12 w-12 items-center justify-center rounded-[12px] bg-primarybadge'>
                 <Image
                   src={item.icon}
                   alt={item.title}

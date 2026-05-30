@@ -1,9 +1,5 @@
-import React from 'react'
+import { SessionsPageClient } from './SessionsPageClient'
 
-const page = () => {
-  return (
-    <div>page</div>
-  )
+export default function SessionsPage() {
+  return <SessionsPageClient />
 }
-
-export default page

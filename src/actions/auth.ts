@@ -1,56 +1,54 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use server';
 
-import { authenticateUser } from '@/lib/services/auth';
 import { cookies } from 'next/headers';
+import { refreshSessionToken, type RefreshActionResult } from '@/lib/services/auth-session';
 
-export async function loginAction(
-  prevState: any,
-  formData: FormData
-) {
-  const email = formData.get('email') as string;
-  const password = formData.get('password') as string;
-  const type = formData.get('type') as 'admin' | 'trainer';
+/**
+ * Server Action that securely reads httpOnly cookies on the server,
+ * calls the refresh endpoint, and returns the new session token details.
+ */
+export async function refreshSessionAction(): Promise<RefreshActionResult> {
+  return await refreshSessionToken();
+}
 
+/**
+ * Server Action to securely set httpOnly auth cookies on the server during login.
+ */
+export async function loginSessionAction(
+  accessToken: string,
+  refreshToken: string
+): Promise<void> {
+  const cookieStore = await cookies();
 
-  const endpoint =
-    type === 'admin'
-      ? '/auth/admin/log-in'
-      : '/api/v1/trainers/login';
+  cookieStore.set("session_token", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 7 * 24 * 60 * 60,
+  });
 
-  try {
-    const result = await authenticateUser(
-      { email, password },
-      endpoint
-    );
+  cookieStore.set("access_token", accessToken, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 7 * 24 * 60 * 60,
+  });
 
-    const cookieStore = await cookies();
+  cookieStore.set("has_refresh_token", "true", {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 7 * 24 * 60 * 60,
+  });
 
-    cookieStore.set('session_token', result.data.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: result.data.expires_in,
-    })
-
-    cookieStore.set('user_type', result.data.user.user_type, {
-      httpOnly: false,
-      sameSite: 'lax',
-      path: '/',
-    })
-
-    return {
-      success: true,
-      redirectTo:
-        type === 'admin'
-          ? '/admin/dashboard'
-          : '/dashboard/trainers',
-    };
-  } catch (error: any) {
-    return {
-      success: false,
-      error: error.message,
-    };
-  }
+  cookieStore.set("refresh_token", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 7 * 24 * 60 * 60,
+  });
 }
