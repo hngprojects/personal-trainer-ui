@@ -1,11 +1,13 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { getRequest } from "~/lib/http";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getRequest, putRequest } from "~/lib/http";
 import { API_ENDPOINTS } from "./api-endpoints";
 import type { Session } from "@/components/adminSessions/session";
-import { mapBackendSessionsResponse } from "@/lib/sessions/map-session";
+import { mapBackendSessionsResponse, mapState } from "@/lib/sessions/map-session";
+import { displayError, showSuccessToast } from "@/lib/utils";
 import type {
+  CancelSessionResponse,
   SessionsListResponse,
   SessionStatsResponse,
 } from "./types/sessions";
@@ -16,6 +18,31 @@ const ADMIN_SESSIONS_PAGE = 1;
 const ADMIN_SESSIONS_LIMIT = 100;
 const TRAINER_SESSIONS_PAGE = 1;
 const TRAINER_SESSIONS_LIMIT = 10;
+
+type RescheduleSessionInput = {
+  sessionId: string;
+  scheduledStart: string;
+  scheduledEnd: string;
+  displayScheduled: string;
+};
+
+type RescheduleSessionPayload = {
+  scheduled_start: string;
+  scheduled_end: string;
+};
+
+type CancelSessionInput = {
+  sessionId: string;
+  reason: string;
+  targetSortTimestamp?: number;
+  targetScheduled?: string;
+  targetClientName?: string;
+  targetTrainerName?: string;
+};
+
+type CancelSessionPayload = {
+  reason: string;
+};
 
 async function fetchAdminSessions(): Promise<Session[]> {
   const response = await getRequest<SessionsListResponse>({
@@ -45,6 +72,109 @@ export function useSessionStats() {
         url: API_ENDPOINTS.ADMIN.SESSIONS_STATS,
       }),
     staleTime: 60_000,
+  });
+}
+
+export function useRescheduleSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      sessionId,
+      scheduledStart,
+      scheduledEnd,
+    }: RescheduleSessionInput) =>
+      putRequest<unknown, RescheduleSessionPayload>({
+        url: API_ENDPOINTS.ADMIN.SESSION_RESCHEDULE(sessionId),
+        payload: {
+          scheduled_start: scheduledStart,
+          scheduled_end: scheduledEnd,
+        },
+      }),
+    mutationKey: ["reschedule-session"],
+    async onMutate(input) {
+      await queryClient.cancelQueries({ queryKey: adminSessionsQueryKey });
+      const previousSessions =
+        queryClient.getQueryData<Session[]>(adminSessionsQueryKey);
+
+      queryClient.setQueryData<Session[]>(adminSessionsQueryKey, (current) =>
+        current?.map((session) =>
+          session.id === input.sessionId
+            ? {
+                ...session,
+                scheduled: input.displayScheduled,
+                state: "Scheduled",
+                sortTimestamp: new Date(input.scheduledStart).getTime(),
+              }
+            : session,
+        ),
+      );
+
+      return { previousSessions };
+    },
+    onError(error, _input, context) {
+      if (context?.previousSessions) {
+        queryClient.setQueryData(adminSessionsQueryKey, context.previousSessions);
+      }
+      displayError(error, "Could not reschedule session");
+    },
+    onSuccess() {
+      showSuccessToast("Session rescheduled");
+    },
+    onSettled() {
+      queryClient.invalidateQueries({ queryKey: adminSessionsQueryKey });
+    },
+  });
+}
+
+export function useCancelSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ sessionId, reason }: CancelSessionInput) =>
+      putRequest<CancelSessionResponse, CancelSessionPayload>({
+        url: API_ENDPOINTS.ADMIN.SESSION_CANCEL(sessionId),
+        payload: { reason },
+      }),
+    mutationKey: ["cancel-session"],
+    onSuccess(response, input) {
+      const state = mapState(response.data.booking_status);
+
+      queryClient.setQueryData<Session[]>(adminSessionsQueryKey, (current) => {
+        let didUpdateTarget = false;
+
+        return current?.map((session) => {
+          const isTargetSession =
+            session.id === input.sessionId &&
+            (input.targetSortTimestamp === undefined ||
+              session.sortTimestamp === input.targetSortTimestamp) &&
+            (input.targetScheduled === undefined ||
+              session.scheduled === input.targetScheduled) &&
+            (input.targetClientName === undefined ||
+              session.client.name === input.targetClientName) &&
+            (input.targetTrainerName === undefined ||
+              session.trainer.name === input.targetTrainerName);
+
+          if (!didUpdateTarget && isTargetSession) {
+            didUpdateTarget = true;
+            return {
+              ...session,
+              state,
+            };
+          }
+
+          return session;
+        });
+      });
+
+      showSuccessToast("Session cancelled");
+    },
+    onError(error) {
+      displayError(error, "Could not cancel session");
+    },
+    onSettled() {
+      queryClient.invalidateQueries({ queryKey: adminSessionsQueryKey });
+    },
   });
 }
 

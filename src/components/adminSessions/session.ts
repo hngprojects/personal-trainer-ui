@@ -13,9 +13,11 @@ export interface Session {
     | "Completed"
     | "Unconfirmed"
     | "Scheduled"
+    | "Cancelled"
     | "Settled"
     | "Disputed"
     | "Missed";
+  sortTimestamp?: number;
   forceConfirmation?: {
     behalf: "client" | "trainer" | "both";
     reason: string;

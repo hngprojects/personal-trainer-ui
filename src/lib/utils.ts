@@ -39,6 +39,7 @@ export function getErrorMessage(error: unknown, fallback = 'Something went wrong
 }
 
 export function displayError(error: unknown, fallback?: string) {
+  console.error('[API Error]', error);
   toast.error(getErrorMessage(error, fallback));
 }
 
@@ -83,3 +84,22 @@ export const TruncateEmail = (
 
   return `${truncate}@${domain}`;
 };
+
+export function isValidImageSrc(src: string | null | undefined): boolean {
+  if (!src) return false;
+  const trimmed = src.trim();
+  if (
+    trimmed === 'string' ||
+    trimmed === 'null' ||
+    trimmed === 'undefined' ||
+    trimmed === ''
+  ) {
+    return false;
+  }
+  return (
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('/') ||
+    trimmed.startsWith('data:image/')
+  );
+}

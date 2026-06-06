@@ -11,12 +11,15 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { Session } from './session'
+import { formatSessionId, getStateBadgeStyles } from './session-display'
+import { isValidImageSrc } from '@/lib/utils'
 
 interface RowProps {
   session: Session
   index?: number
-  onViewDetails: (id: string) => void
-  onReschedule?: (id: string) => void
+  onViewDetails: (session: Session) => void
+  onReschedule?: (session: Session) => void
+  onCancel?: (session: Session) => void
 }
 
 export const sessionRowVariants: Variants = {
@@ -43,18 +46,19 @@ export const sessionRowVariants: Variants = {
   },
 }
 
-const formatSessionId = (id: string) => {
-  if (id.length <= 12) return id
-  return `${id.slice(0, 8)}...${id.slice(-4)}`
-}
+const DEFAULT_SESSION_TYPE = 'Monthly'
+const DEFAULT_SESSION_AMOUNT = '$20'
 
 export function SessionTableRow({
   session,
   index = 0,
   onViewDetails,
   onReschedule,
+  onCancel,
 }: RowProps) {
   const isClientConfirmed = session.clientConf === 'Yes'
+  const isCancelled = session.state === 'Cancelled'
+  const isCompleted = session.state === 'Completed'
 
   const confStyle = (val: string) => {
     if (val === 'Yes') return 'bg-[#e7f6ec] text-[#0f973d]'
@@ -83,7 +87,7 @@ export function SessionTableRow({
 
       <td className='px-4 py-3.5'>
         <div className='flex items-center gap-2'>
-          {session.client.avatar ? (
+          {session.client.avatar && isValidImageSrc(session.client.avatar) ? (
             <Image
               src={session.client.avatar}
               alt={session.client.name}
@@ -110,7 +114,7 @@ export function SessionTableRow({
 
       <td className='px-4 py-3.5'>
         <div className='flex items-center gap-2'>
-          {session.trainer.avatar ? (
+          {session.trainer.avatar && isValidImageSrc(session.trainer.avatar) ? (
             <Image
               src={session.trainer.avatar}
               alt={session.trainer.name}
@@ -135,11 +139,21 @@ export function SessionTableRow({
         </div>
       </td>
 
+      <td className='px-4 py-3.5'>
+        <span className='inline-flex rounded-[9999px] bg-[#eef6ff] px-2 py-0.5 text-[10px] font-semibold text-[#0b4d8d]'>
+          {DEFAULT_SESSION_TYPE}
+        </span>
+      </td>
+
       <td className='px-4 py-3.5 text-[11px] font-medium text-gray-600'>
         {session.scheduled}
       </td>
       <td className='px-4 py-3.5 text-[11px] font-medium text-gray-400'>
         {session.duration}
+      </td>
+
+      <td className='px-4 py-3.5 text-[11px] font-semibold text-gray-700'>
+        {DEFAULT_SESSION_AMOUNT}
       </td>
 
       <td className='px-4 py-3.5'>
@@ -150,6 +164,12 @@ export function SessionTableRow({
             <span className={`h-1.5 w-1.5 rounded-[9999px] ${dotStyle(session.clientConf)}`} />
           )}
           {session.clientConf}
+        </span>
+      </td>
+
+      <td className='px-4 py-3.5'>
+        <span className={`inline-flex rounded-[9999px] px-2 py-0.5 text-[11px] font-semibold ${getStateBadgeStyles(session.state)}`}>
+          {session.state}
         </span>
       </td>
 
@@ -169,7 +189,14 @@ export function SessionTableRow({
           >
             {isClientConfirmed ? (
               <DropdownMenuItem
-                onClick={() => onViewDetails(session.id)}
+                onClick={() => onViewDetails(session)}
+                className='cursor-pointer rounded-[8px] bg-[#0b4d8d] px-3 py-2 text-xs font-semibold text-white focus:bg-[#0b4d8d] focus:text-white'
+              >
+                View detail
+              </DropdownMenuItem>
+            ) : isCancelled ? (
+              <DropdownMenuItem
+                onClick={() => onViewDetails(session)}
                 className='cursor-pointer rounded-[8px] bg-[#0b4d8d] px-3 py-2 text-xs font-semibold text-white focus:bg-[#0b4d8d] focus:text-white'
               >
                 View detail
@@ -177,16 +204,24 @@ export function SessionTableRow({
             ) : (
               <>
                 <DropdownMenuItem
-                  onClick={() => onViewDetails(session.id)}
+                  onClick={() => onViewDetails(session)}
                   className='cursor-pointer rounded-[8px] bg-[#0b4d8d] px-3 py-2 text-xs font-semibold text-white focus:bg-[#0b4d8d] focus:text-white'
                 >
                   View detail
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => onReschedule?.(session.id)}
+                  onClick={() => onReschedule?.(session)}
+                  disabled={isCompleted}
                   className='cursor-pointer rounded-[8px] px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 focus:bg-gray-50'
                 >
                   Reschedule
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onCancel?.(session)}
+                  disabled={isCompleted}
+                  className='cursor-pointer rounded-[8px] px-3 py-2 text-xs font-semibold text-[#c7374a] hover:bg-[#fff5f6] focus:bg-[#fff5f6] disabled:cursor-not-allowed disabled:opacity-50'
+                >
+                  Cancel Session
                 </DropdownMenuItem>
               </>
             )}

@@ -29,6 +29,7 @@ import {
   type UpdateTrainerFormInput,
 } from '@/lib/trainers/build-update-trainer-form-data';
 import { mapBackendToFrontend } from '@/lib/trainers/map-trainer';
+import { getStoredTrainerId } from '@/lib/auth/trainer-profile';
 
 export type AdminTrainersFilters = {
   onboardingStatus?: string;
@@ -47,6 +48,7 @@ export const trainerQueryKeys = {
   ) => ['admin-trainers', page, perPage, onboardingStatus, searchQuery] as const,
   summary: (onboardingStatus?: string) =>
     ['admin-trainers', 'summary', onboardingStatus] as const,
+  summaryCounts: () => ['admin-trainers', 'summary-counts'] as const,
   detail: (id: string) => ['trainer', id] as const,
 };
 
@@ -145,7 +147,7 @@ export function useAdminTrainersSummary(onboardingStatus?: string) {
 
 export function useTrainerStatusCounts() {
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-trainers-summary-counts'],
+    queryKey: trainerQueryKeys.summaryCounts(),
     queryFn: async () => {
       const response = await getRequest<TrainersListResponse>({
         url: `${API_ENDPOINTS.TRAINERS.LIST}?limit=100`,
@@ -315,14 +317,37 @@ export function useDeleteTrainer() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) =>
-      deleteRequest({
+    mutationFn: async (id: string) => {
+      try {
+        // Deactivate user account via DELETE request
+        await deleteRequest({
+          url: API_ENDPOINTS.TRAINERS.DETAIL(id),
+        });
+      } catch (error) {
+        const err = error as {
+          response?: { status?: number; data?: { message?: string } };
+          message?: string;
+        };
+        const status = err.response?.status;
+        const msg = err.response?.data?.message || err.message || '';
+        const isAlreadyDeactivated =
+          status === 409 || msg.toLowerCase().includes('already deactivated');
+
+        if (!isAlreadyDeactivated) {
+          throw error;
+        }
+      }
+
+      // 2. Sync onboarding_status to 'suspended' using PATCH request
+      await patchRequest<UpdateTrainerResponse, UpdateTrainerPayload>({
         url: API_ENDPOINTS.TRAINERS.DETAIL(id),
-      }),
+        payload: { onboarding_status: 'suspended' },
+      });
+    },
     mutationKey: ['delete-trainer'],
     onSuccess() {
       queryClient.invalidateQueries({ queryKey: trainerQueryKeys.all });
-      showSuccessToast('Trainer deleted');
+      showSuccessToast('Trainer deactivated');
     },
     onError(error) {
       displayError(error);
@@ -351,6 +376,53 @@ export function useGetApprovedTrainers() {
         url: `${API_ENDPOINTS.TRAINERS.LIST}?onboarding_status=approved&limit=100`,
       });
       return Array.isArray(response.data) ? response.data : [];
+    },
+  });
+}
+
+export function useTrainerMe() {
+  return useQuery({
+    queryKey: ['trainer-me'] as const,
+    queryFn: async () => {
+      const trainerId = getStoredTrainerId();
+      if (trainerId) {
+        try {
+          const response = await getRequest<TrainerDetailResponse>({
+            url: API_ENDPOINTS.TRAINERS.DETAIL(trainerId),
+          });
+          return { data: mapBackendToFrontend(response.data) };
+        } catch (error) {
+          console.error("Failed to fetch trainer by ID, falling back to /me", error);
+        }
+      }
+
+      const response = await getRequest<TrainerDetailResponse>({
+        url: API_ENDPOINTS.TRAINERS.ME,
+      });
+      return { data: mapBackendToFrontend(response.data) };
+    },
+    staleTime: 60_000,
+  });
+}
+
+export function useEditTrainerProfile() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: Partial<UpdateTrainerPayload>) => {
+      const response = await patchRequest<UpdateTrainerResponse, Partial<UpdateTrainerPayload>>({
+        url: API_ENDPOINTS.TRAINERS.ME_EDIT_PROFILE,
+        payload,
+      });
+      return response.data;
+    },
+    mutationKey: ['edit-trainer-profile'],
+    onSuccess() {
+      queryClient.invalidateQueries({ queryKey: ['trainer-me'] });
+      showSuccessToast('Profile updated successfully');
+    },
+    onError(error) {
+      displayError(error);
     },
   });
 }

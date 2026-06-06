@@ -86,7 +86,7 @@ export function TrainerDashboardClient() {
         </h1>
         <button
           type="button"
-          className="inline-flex w-fit items-center gap-2 rounded-[8px] border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 shadow-sm"
+          className="inline-flex w-fit items-center gap-2 rounded-[8px] border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 "
         >
           <CalendarDays className="h-4 w-4 text-gray-400" />
           {todayLabel}
@@ -98,17 +98,14 @@ export function TrainerDashboardClient() {
             <TrainerStatCard
               title="Total Clients (MAY)"
               value={clientCount}
-              subtext="+12% from last week"
             />
             <TrainerStatCard
               title="Upcoming Sessions"
               value={upcomingCount}
-              subtext="+2 from last week"
             />
             <TrainerStatCard
               title="Completed Sessions"
               value={completedCount}
-              subtext="+8 from last week"
             />
             <TrainerStatCard
               title="Total Reviews"
