@@ -8,6 +8,7 @@ import { Button } from '../ui/button'
 import { toast } from 'sonner'
 import { waitlistAction } from '@/actions/waitlist'
 import { PhoneInputField } from '@/components/ui/phone-input'
+import { EmailInput } from '../ui/email-input'
 import {
   PHONE_NUMBER_ERROR,
   isStrongPhoneNumber,
@@ -15,8 +16,14 @@ import {
 } from '@/lib/phone-number'
 
 const waitlistSchema = z.object({
-  name: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
-  email: z.string().min(1, { message: 'Email is required.' }).email({ message: 'Please enter a valid email address.' }).max(254, { message: 'Email address is too long.' }),
+  name: z
+    .string()
+    .min(2, { message: 'Full name must be at least 2 characters.' }),
+  email: z
+    .string()
+    .min(1, { message: 'Email is required.' })
+    .email({ message: 'Please enter a valid email address.' })
+    .max(254, { message: 'Email address is too long.' }),
   phone_number: z
     .string()
     .min(1, { message: 'Phone number is required.' })
@@ -29,13 +36,18 @@ const waitlistSchema = z.object({
 type WaitlistValues = z.infer<typeof waitlistSchema>
 
 const inputStyles =
-  'min-h-12 w-full rounded-[6px] border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-muted outline-none focus:border-primary transition-all'
+  'min-h-12 w-full rounded-[16px] border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-muted outline-none focus:border-primary transition-all'
 
 const errorStyles = 'mt-1 text-xs text-red-500'
 
-export const WaitlistForm = () => {
-  const [isSubmitting, startTransition] = useTransition()
+type WaitlistFormProps = {
+  ctaLabel?: string
+}
 
+export const WaitlistForm = ({
+  ctaLabel = 'Join the Waitlist',
+}: WaitlistFormProps) => {
+  const [isSubmitting, startTransition] = useTransition()
   const {
     register,
     control,
@@ -70,6 +82,8 @@ export const WaitlistForm = () => {
         } else {
           toast.success("You're on the list! We'll be in touch soon.")
           reset()
+          sessionStorage.setItem('waitlistSubmitted', 'true')
+          window.location.replace('/thank-you')
         }
       } else {
         toast.error(result?.error || 'Something went wrong. Please try again.')
@@ -78,15 +92,15 @@ export const WaitlistForm = () => {
   }
 
   return (
-    <div className='relative w-full max-w-lg'>
+    <div className="relative w-full md:max-w-lg">
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className='flex w-full flex-col gap-3'
+        className="flex w-full flex-col gap-3"
       >
         <div>
           <input
-            type='text'
-            placeholder='Full name'
+            type="text"
+            placeholder="Full name"
             {...register('name')}
             className={inputStyles}
             disabled={isSubmitting}
@@ -95,12 +109,21 @@ export const WaitlistForm = () => {
         </div>
 
         <div>
-          <input
-            type='email'
-            placeholder='johndoe@example.com'
-            {...register('email')}
-            className={inputStyles}
-            disabled={isSubmitting}
+          <Controller
+            name="email"
+            control={control}
+            render={({ field }) => (
+              <EmailInput
+                ref={field.ref}
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                name={field.name}
+                placeholder="johndoe@example.com"
+                className={inputStyles}
+                disabled={isSubmitting}
+              />
+            )}
           />
           {errors.email && (
             <p className={errorStyles}>{errors.email.message}</p>
@@ -109,7 +132,7 @@ export const WaitlistForm = () => {
 
         <div>
           <Controller
-            name='phone_number'
+            name="phone_number"
             control={control}
             render={({ field }) => (
               <PhoneInputField
@@ -129,8 +152,8 @@ export const WaitlistForm = () => {
 
         <div>
           <input
-            type='text'
-            placeholder='Location (e.g. California, USA)'
+            type="text"
+            placeholder="Location (e.g. California, USA)"
             {...register('location')}
             className={inputStyles}
             disabled={isSubmitting}
@@ -140,8 +163,12 @@ export const WaitlistForm = () => {
           )}
         </div>
 
-        <Button type='submit' disabled={isSubmitting}>
-          {isSubmitting ? 'Processing...' : 'Join the Waitlist'}
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="h-[44px] rounded-[16px]"
+        >
+          {isSubmitting ? 'Processing...' : ctaLabel}
         </Button>
       </form>
     </div>

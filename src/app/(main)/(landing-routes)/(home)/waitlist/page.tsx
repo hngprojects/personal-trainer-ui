@@ -12,7 +12,12 @@ import TrainerReady from '~/components/squeeze/TrainerReady'
 const WaitList = () => {
   return (
     <main className="w-full pt-28 md:pt-48">
-      <Hero />
+      <Hero
+        badge="Live trainer accountability"
+        headline="Never miss a workout session"
+        description="Connect with vetted fitness trainers who call you at your scheduled time — live, on video. Join the waitlist for exclusive early access to FitCall."
+        ctaLabel="Join the Waitlist"
+      />
       <IntegrationsBar />
       <section className="bg-secondary py-6">
         <Testimonials />
